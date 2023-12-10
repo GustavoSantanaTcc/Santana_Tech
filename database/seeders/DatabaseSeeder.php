@@ -13,5 +13,7 @@ class DatabaseSeeder extends Seeder
             'email' => 'admin@admin.com',
             'password' => bcrypt('12345')
         ]);
+
+        MedicamentoSeeder::class;
     }
 }
