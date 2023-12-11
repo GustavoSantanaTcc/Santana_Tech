@@ -60,12 +60,15 @@ class MedicamentoPage extends Page implements HasForms, HasTable
                 // ...
             ])
             ->actions([
-                DeleteAction::make()->label('Excluir')->successNotification(
-                    Notification::make()
-                        ->success()
-                        ->title('Medicamento deletado')
-                        ->body('O medicamento foi deletado com sucesso!'),
-                ),
+                Action::make('view')
+                    ->label('Visualizar')
+                    ->icon('heroicon-o-eye')
+                    ->action(function (Medicamento $medicamentos) {
+                        $this->show_form = 'view';
+                        $id_edit = $medicamentos->id;
+                        $dados = Medicamento::where('id', $id_edit)->first()->toArray();
+                        $this->form->fill($dados);
+                    }),
                 Action::make('edit')
                     ->label('Editar')
                     ->icon('heroicon-o-pencil')
@@ -75,6 +78,12 @@ class MedicamentoPage extends Page implements HasForms, HasTable
                         $dados = Medicamento::where('id', $id_edit)->first()->toArray();
                         $this->form->fill($dados);
                     }),
+                DeleteAction::make()->label('Excluir')->successNotification(
+                    Notification::make()
+                        ->success()
+                        ->title('Medicamento deletado')
+                        ->body('O medicamento foi deletado com sucesso!'),
+                ),
             ]);
     }
 
@@ -88,12 +97,14 @@ class MedicamentoPage extends Page implements HasForms, HasTable
                     ->maxLength(255)
                     ->columnSpan(4)
                     ->placeholder('Digite o nome do medicamento')
+                    ->disabled(fn() => $this->show_form == 'view')
                     ->required(),
                 TextInput::make('fabricante')
                     ->label('Fabricante')
                     ->maxLength(255)
                     ->columnSpan(4)
                     ->placeholder('Digite o nome do fabricante')
+                    ->disabled(fn() => $this->show_form == 'view')
                     ->required(),
                 Select::make('tipo')
                     ->label('Tipo')
@@ -106,16 +117,19 @@ class MedicamentoPage extends Page implements HasForms, HasTable
                     ])
                     ->placeholder('Selecione o tipo de medicamento')
                     ->columnSpan(4)
+                    ->disabled(fn() => $this->show_form == 'view')
                     ->required(),
                 TextInput::make('lote')
                     ->label('Lote')
                     ->columns(2)
                     ->numeric()
+                    ->disabled(fn() => $this->show_form == 'view')
                     ->required(),
                 TextInput::make('quantidade')
                     ->label('Quantidade')
                     ->columns(2)
                     ->numeric()
+                    ->disabled(fn() => $this->show_form == 'view')
                     ->required(),
                 DatePicker::make('validade')
                     ->columnSpan(2)
@@ -123,11 +137,13 @@ class MedicamentoPage extends Page implements HasForms, HasTable
                     ->displayFormat('d/m/Y')
                     ->minDate(now())
                     ->placeholder('dd/mm/aaaa')
+                    ->disabled(fn() => $this->show_form == 'view')
                     ->required(),
                 MarkdownEditor::make('descricao')
                     ->label('Descrição')
                     ->fileAttachmentsDisk('public')
                     ->fileAttachmentsDirectory('public/uploads/markdown')
+                    ->disabled(fn() => $this->show_form == 'view')
                     ->columnSpan(12),
             ])
             ->statePath('data');
@@ -141,12 +157,11 @@ class MedicamentoPage extends Page implements HasForms, HasTable
             $this->id_edit = $id;
             $this->dados = Medicamento::find($id)->toArray();
             $this->form->fill($this->dados);
-        } elseif ($view == 'view' && $id != null) {
-            $this->medicamento_id = $id;
-            $this->dados = Medicamento::find($id)->toArray();
+        }
+        if ($view == 'view' && $id != null) {
+            $this->show_form = 'view';
+            $this->dados = Medicamento::where('id', $id)->first()->toArray();
             $this->form->fill($this->dados);
-        } else {
-            $this->form->fill();
         }
     }
 
@@ -183,6 +198,19 @@ class MedicamentoPage extends Page implements HasForms, HasTable
 
     public function back()
     {
+        $this->form->fill();
+        $this->show_form = 'list';
+    }
+
+    public function delete()
+    {
+        Medicamento::where('id', $this->medicamento_id)->delete();
+        $mensagem = "O medicamento foi deletado com sucesso!";
+        Notification::make()
+            ->success()
+            ->title($mensagem)
+            ->send();
+
         $this->form->fill();
         $this->show_form = 'list';
     }
