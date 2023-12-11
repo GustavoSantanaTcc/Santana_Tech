@@ -9,12 +9,12 @@ return new class extends Migration {
     {
         Schema::create('medicamentos', function (Blueprint $table) {
             $table->id();
-            $table->string('nome')->nullable()->maxlength(255);
-            $table->string('fabricante');
-            $table->integer('lote');
-            $table->date('validade');
-            $table->integer('quantidade');
-            $table->string('tipo');
+            $table->string('nome')->required()->maxLength(255);
+            $table->string('fabricante')->required()->maxLength(255);
+            $table->integer('lote')->numeric()->required();
+            $table->date('validade')->required();
+            $table->integer('quantidade')->numeric()->required();
+            $table->string('tipo')->required();
             $table->string('descricao');
             $table->timestamps();
         });
