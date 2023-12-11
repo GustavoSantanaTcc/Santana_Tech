@@ -38,18 +38,13 @@ class MedicamentoPage extends Page implements HasForms, HasTable
     public $value;
     public $id;
     public $id_edit;
-
-    #[Validate('required')]
     public $nome = '';
-
-    // #[Validate('required')]
-    // public $fabricante = '';
-
-    // public $lote = '';
-    // public $validade = '';
-    // public $quantidade = '';
-    // public $tipo = '';
-    // public $descricao = '';
+    public $fabricante = '';
+    public $lote = '';
+    public $validade = '';
+    public $quantidade = '';
+    public $tipo = '';
+    public $descricao = '';
 
     public function table(Table $table): Table
     {
@@ -57,9 +52,9 @@ class MedicamentoPage extends Page implements HasForms, HasTable
             ->query(Medicamento::query())
             ->columns([
                 TextColumn::make('nome')->sortable()->searchable(),
-                // TextColumn::make('validade')->dateTime('d/m/Y')->sortable(),
-                // TextColumn::make('fabricante'),
-                // TextColumn::make('tipo'),
+                TextColumn::make('validade')->dateTime('d/m/Y')->sortable(),
+                TextColumn::make('fabricante'),
+                TextColumn::make('tipo'),
             ])->defaultSort('nome', 'asc')
             ->filters([
                 // ...
@@ -75,8 +70,10 @@ class MedicamentoPage extends Page implements HasForms, HasTable
                     ->label('Editar')
                     ->icon('heroicon-o-pencil')
                     ->action(function (Medicamento $medicamentos) {
-                        $this->showForm($this->value = 'edit', $medicamentos->id);
-                        // dd($medicamentos->id);
+                        $this->show_form = 'edit';
+                        $id_edit = $medicamentos->id;
+                        $dados = Medicamento::where('id', $id_edit)->first()->toArray();
+                        $this->form->fill($dados);
                     }),
             ]);
     }
@@ -87,36 +84,51 @@ class MedicamentoPage extends Page implements HasForms, HasTable
             ->columns(12)
             ->schema([
                 TextInput::make('nome')
+                    ->label('Nome')
                     ->maxLength(255)
                     ->columnSpan(4)
                     ->placeholder('Digite o nome do medicamento')
                     ->required(),
-                // TextInput::make('fabricante')
-                //     ->maxLength(255)
-                //     ->columnSpan(4)
-                //     ->placeholder('Digite o nome do fabricante'),
-                // Select::make('tipo')
-                //     ->options([
-                //         'Comprimido' => 'Comprimido',
-                //         'Gotas' => 'Gotas',
-                //         'Pomada' => 'Pomada',
-                //         'Xarope' => 'Xarope',
-                //         'Outros' => 'Outros',
-                //     ])
-                //     ->placeholder('Selecione o tipo de medicamento')
-                //     ->columnSpan(4),
-                // TextInput::make('lote')
-                //     ->columns(2)
-                //     ->numeric(),
-                // TextInput::make('quantidade')
-                //     ->columns(2)
-                //     ->numeric(),
-                // DatePicker::make('validade')
-                //     ->columnSpan(2)
-                //     ->displayFormat('d/m/Y')
-                //     ->placeholder('dd/mm/aaaa'),
-                // MarkdownEditor::make('descricao')
-                //     ->columnSpan(12),
+                TextInput::make('fabricante')
+                    ->label('Fabricante')
+                    ->maxLength(255)
+                    ->columnSpan(4)
+                    ->placeholder('Digite o nome do fabricante')
+                    ->required(),
+                Select::make('tipo')
+                    ->label('Tipo')
+                    ->options([
+                        'Comprimido' => 'Comprimido',
+                        'Gotas' => 'Gotas',
+                        'Pomada' => 'Pomada',
+                        'Xarope' => 'Xarope',
+                        'Outros' => 'Outros',
+                    ])
+                    ->placeholder('Selecione o tipo de medicamento')
+                    ->columnSpan(4)
+                    ->required(),
+                TextInput::make('lote')
+                    ->label('Lote')
+                    ->columns(2)
+                    ->numeric()
+                    ->required(),
+                TextInput::make('quantidade')
+                    ->label('Quantidade')
+                    ->columns(2)
+                    ->numeric()
+                    ->required(),
+                DatePicker::make('validade')
+                    ->columnSpan(2)
+                    ->label('Validade')
+                    ->displayFormat('d/m/Y')
+                    ->minDate(now())
+                    ->placeholder('dd/mm/aaaa')
+                    ->required(),
+                MarkdownEditor::make('descricao')
+                    ->label('Descrição')
+                    ->fileAttachmentsDisk('public')
+                    ->fileAttachmentsDirectory('public/uploads/markdown')
+                    ->columnSpan(12),
             ])
             ->statePath('data');
     }
@@ -124,36 +136,48 @@ class MedicamentoPage extends Page implements HasForms, HasTable
     public function showForm($view, $id = null)
     {
         $this->show_form = $view;
-        if ($id != null && $view == 'edit') {
-            $this->show_form = 'create';
+
+        if ($view == 'edit' && $id != null) {
             $this->id_edit = $id;
-            $this->dados = Medicamento::where('id', $id)->first()->toArray();
+            $this->dados = Medicamento::find($id)->toArray();
             $this->form->fill($this->dados);
-        }
-        if ($id != null && $view == 'edit') {
+        } elseif ($view == 'view' && $id != null) {
             $this->medicamento_id = $id;
-            $this->show_form = 'view';
-            $this->dados = Medicamento::where('id', $id)->first()->toArray();
+            $this->dados = Medicamento::find($id)->toArray();
             $this->form->fill($this->dados);
+        } else {
+            $this->form->fill();
         }
     }
 
     public function submit()
     {
-        // $this->validate();
-        $dados = $this->form->getState();
+        if ($this->show_form == 'edit') {
+            $dados = $this->form->getState();
+            Medicamento::where('id', $this->id_edit)->update($dados);
+            $mensagem = "O medicamento foi atualizado com sucesso!";
+            Notification::make()
+                ->success()
+                ->title($mensagem)
+                ->send();
 
-        Medicamento::create($dados);
+            $this->form->fill();
+            $this->show_form = 'list';
+        } else {
+            $dados = $this->form->getState();
 
-        $mensagem = "O medicamento foi cadastrado com sucesso!";
+            Medicamento::create($dados);
 
-        Notification::make()
-            ->success()
-            ->title($mensagem)
-            ->send();
+            $mensagem = "O medicamento foi cadastrado com sucesso!";
 
-        $this->form->fill();
-        $this->show_form = 'list';
+            Notification::make()
+                ->success()
+                ->title($mensagem)
+                ->send();
+
+            $this->form->fill();
+            $this->show_form = 'list';
+        }
     }
 
 
@@ -165,7 +189,7 @@ class MedicamentoPage extends Page implements HasForms, HasTable
 
     public function mount()
     {
-        $this->show_form = 'create';
+        $this->show_form = 'list';
         $this->form->fill();
     }
 
